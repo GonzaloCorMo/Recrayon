@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Recrayon
+GenericName=Screen annotation
+GenericName[es]=Anotación en pantalla
+Comment=Draw on top of your screen while you keep working
+Comment[es]=Dibuja sobre la pantalla sin dejar de usarla
+Exec=recrayon
+Icon=recrayon
+Terminal=false
+StartupNotify=false
+Categories=Graphics;Education;
+Keywords=draw;annotate;screen;presentation;whiteboard;record;screenshot;
+Keywords[es]=dibujar;anotar;pantalla;presentación;pizarra;grabar;captura;

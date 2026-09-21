@@ -1,0 +1,116 @@
+name: Release
+
+# Builds the installers of the three platforms. On a version tag (v1.0.0, v1.1.0...) it also
+# publishes them in a draft GitHub release; run it by hand (Actions > Release > Run workflow) to
+# get them as artifacts only.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  QT_VERSION: "6.8.3"
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: qtmultimedia
+          cache: true
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        run: |
+          cmake --preset release -DRECRAYON_BUILD_TESTS=OFF
+          cmake --build --preset release --target installer
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recrayon-windows
+          path: build/release/installer/Recrayon-*-setup.exe
+          if-no-files-found: error
+
+  linux:
+    name: Linux packages (.deb, AppImage)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build packages in the Ubuntu 22.04 builder image
+        run: |
+          docker build --build-arg QT_VERSION=${{ env.QT_VERSION }} \
+            -t recrayon-linux-builder packaging/linux
+          docker run --rm -v "$PWD:/src" recrayon-linux-builder \
+            bash packaging/linux/build-packages.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recrayon-linux
+          path: |
+            build/linux-release/*.deb
+            build/linux-release/appimage/*.AppImage
+          if-no-files-found: error
+
+  macos:
+    name: macOS disk image
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: qtmultimedia
+          cache: true
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # Universal binary (Apple Silicon + Intel): the official Qt binaries are universal.
+      - name: Build disk image
+        run: |
+          cmake --preset release -DRECRAYON_BUILD_TESTS=OFF \
+            "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+          cmake --build --preset release --target package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recrayon-macos
+          path: build/release/Recrayon-*-macOS.dmg
+          if-no-files-found: error
+
+  publish:
+    name: Draft GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: dist/*

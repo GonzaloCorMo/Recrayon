@@ -1,0 +1,33 @@
+# Build output
+/build/
+/out/
+/install/
+
+# Local CMake configuration (Qt path, compiler, etc.)
+CMakeUserPresets.json
+compile_commands.json
+
+# IDEs
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.user
+*.user.*
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Development documentation and tooling: kept locally, not published
+/CLAUDE.md
+/docs/*
+!/docs/media/
+/docs/media/tools/
+
+# Local secrets / personal data
+.env
