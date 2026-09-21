@@ -20,7 +20,7 @@ jobs:
     name: Windows installer
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -29,11 +29,24 @@ jobs:
           modules: qtmultimedia
           cache: true
 
-      - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v5
-
+      # Developer environment of Visual Studio (cl.exe, and the Ninja bundled with VS) via
+      # vswhere + vcvars64.bat, without third-party actions.
       - name: Set up MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && set" | ForEach-Object {
+            # Only what vcvars added or changed; GitHub reserves GITHUB_* / RUNNER_* / ACTIONS_*.
+            if ($_ -match '^([^=]+)=(.*)$') {
+              $name, $value = $Matches[1], $Matches[2]
+              if ($name -notmatch '^(GITHUB|RUNNER|ACTIONS)_' -and
+                  [Environment]::GetEnvironmentVariable($name) -ne $value) {
+                "$name=$value" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+              }
+            }
+          }
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
@@ -43,7 +56,7 @@ jobs:
           cmake --preset release -DRECRAYON_BUILD_TESTS=OFF
           cmake --build --preset release --target installer
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: recrayon-windows
           path: build/release/installer/Recrayon-*-setup.exe
@@ -53,7 +66,7 @@ jobs:
     name: Linux packages (.deb, AppImage)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build packages in the Ubuntu 22.04 builder image
         run: |
@@ -62,7 +75,7 @@ jobs:
           docker run --rm -v "$PWD:/src" recrayon-linux-builder \
             bash packaging/linux/build-packages.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: recrayon-linux
           path: |
@@ -74,7 +87,7 @@ jobs:
     name: macOS disk image
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -84,7 +97,7 @@ jobs:
           cache: true
 
       - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v5
+        run: brew install ninja
 
       # Universal binary (Apple Silicon + Intel): the official Qt binaries are universal.
       - name: Build disk image
@@ -93,7 +106,7 @@ jobs:
             "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
           cmake --build --preset release --target package
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: recrayon-macos
           path: build/release/Recrayon-*-macOS.dmg
@@ -105,12 +118,12 @@ jobs:
     needs: [windows, linux, macos]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: dist/*

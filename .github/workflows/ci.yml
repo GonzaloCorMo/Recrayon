@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-14]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -28,18 +28,34 @@ jobs:
           modules: qtmultimedia
           cache: true
 
-      - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v5
-
+      # Developer environment of Visual Studio (cl.exe, and the Ninja bundled with VS) via
+      # vswhere + vcvars64.bat, without third-party actions.
       - name: Set up MSVC environment
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && set" | ForEach-Object {
+            # Only what vcvars added or changed; GitHub reserves GITHUB_* / RUNNER_* / ACTIONS_*.
+            if ($_ -match '^([^=]+)=(.*)$') {
+              $name, $value = $Matches[1], $Matches[2]
+              if ($name -notmatch '^(GITHUB|RUNNER|ACTIONS)_' -and
+                  [Environment]::GetEnvironmentVariable($name) -ne $value) {
+                "$name=$value" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+              }
+            }
+          }
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libegl1 libxkbcommon-x11-0 libxcb-cursor0
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libegl1 libxkbcommon-x11-0 libxcb-cursor0
 
       - name: Configure
         run: cmake --preset ci
@@ -54,7 +70,7 @@ jobs:
     name: clang-format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check formatting
         run: |
           find src tests -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
