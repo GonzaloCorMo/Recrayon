@@ -24,10 +24,6 @@
         <translation>Pizarra en</translation>
     </message>
     <message>
-        <source>The screen under the pointer</source>
-        <translation>La pantalla bajo el puntero</translation>
-    </message>
-    <message>
         <source>All screens</source>
         <translation>Todas las pantallas</translation>
     </message>
@@ -46,14 +42,6 @@
     <message>
         <source>Replay the drawing</source>
         <translation>Reproducir el dibujo</translation>
-    </message>
-    <message>
-        <source>Spotlight pointer</source>
-        <translation>Foco en el puntero</translation>
-    </message>
-    <message>
-        <source>Highlight pointer</source>
-        <translation>Resaltar el puntero</translation>
     </message>
     <message>
         <source>Settings…</source>
@@ -80,18 +68,6 @@
         <translation>Pizarra — una página en blanco sobre las pantallas (Esc para salir)</translation>
     </message>
     <message>
-        <source>Spotlight — dim everything except the area around the pointer</source>
-        <translation>Foco — oscurece todo menos la zona alrededor del puntero</translation>
-    </message>
-    <message>
-        <source>Highlight the pointer with a halo</source>
-        <translation>Resaltar el puntero con un halo</translation>
-    </message>
-    <message>
-        <source>Screenshot: %1 — right-click for other options</source>
-        <translation>Captura: %1 — clic derecho para más opciones</translation>
-    </message>
-    <message>
         <source>Screenshot of a region or window</source>
         <translation>Captura de un recuadro o ventana</translation>
     </message>
@@ -102,10 +78,6 @@
     <message>
         <source>Recording unavailable: built without Qt Multimedia</source>
         <translation>Grabación no disponible: compilado sin Qt Multimedia</translation>
-    </message>
-    <message>
-        <source>Record: %1 — right-click for other options</source>
-        <translation>Grabar: %1 — clic derecho para más opciones</translation>
     </message>
     <message>
         <source>Record a region or window</source>
@@ -166,6 +138,50 @@
     <message>
         <source>Minimize: Recrayon keeps running; open it again from the taskbar or the tray icon</source>
         <translation>Minimizar: Recrayon sigue en marcha; vuelve a abrirlo desde la barra de tareas o el icono de la bandeja</translation>
+    </message>
+    <message>
+        <source>click its toolbar button for other options</source>
+        <translation>haz clic en su botón de la barra para otras opciones</translation>
+    </message>
+    <message>
+        <source>right-click its toolbar button for other options</source>
+        <translation>clic derecho en su botón de la barra para otras opciones</translation>
+    </message>
+    <message>
+        <source>Screenshot: %1 — %2</source>
+        <translation>Captura: %1 — %2</translation>
+    </message>
+    <message>
+        <source>Record: %1 — %2</source>
+        <translation>Grabar: %1 — %2</translation>
+    </message>
+    <message>
+        <source>Collapse the toolbar</source>
+        <translation>Plegar la barra de herramientas</translation>
+    </message>
+    <message>
+        <source>Collapse the toolbar against the nearest edge; the arrow brings it back. Handy to keep it out of the way (and out of captures where it cannot be hidden).</source>
+        <translation>Pliega la barra contra el borde más cercano; la flecha la devuelve. Útil para quitarla de en medio (y de las capturas en los sistemas donde no se puede ocultar).</translation>
+    </message>
+    <message>
+        <source>The screen under the cursor</source>
+        <translation>La pantalla bajo el cursor</translation>
+    </message>
+    <message>
+        <source>Spotlight cursor</source>
+        <translation>Foco en el cursor</translation>
+    </message>
+    <message>
+        <source>Highlight cursor</source>
+        <translation>Resaltar el cursor</translation>
+    </message>
+    <message>
+        <source>Spotlight — dim everything except the area around the cursor</source>
+        <translation>Foco — oscurece todo menos la zona alrededor del cursor</translation>
+    </message>
+    <message>
+        <source>Highlight the cursor with a halo</source>
+        <translation>Resaltar el cursor con un halo</translation>
     </message>
 </context>
 <context>
@@ -241,6 +257,12 @@
     <message>
         <source>Recording failed</source>
         <translation>Error en la grabación</translation>
+    </message>
+    <message>
+        <source>%1
+Click to open the folder</source>
+        <translation>%1
+Pulsa para abrir la carpeta</translation>
     </message>
 </context>
 <context>
@@ -434,10 +456,6 @@
         <translation>Carpeta para los vídeos</translation>
     </message>
     <message>
-        <source>Other targets are always one click away: right-click (or press and hold) the screenshot and record buttons of the toolbar, or use the tray menu.</source>
-        <translation>Los demás destinos están siempre a un clic: clic derecho (o mantener pulsado) en los botones de captura y grabación de la barra, o el menú de la bandeja.</translation>
-    </message>
-    <message>
         <source>Recording is unavailable: this build has no Qt Multimedia.</source>
         <translation>La grabación no está disponible: esta versión no incluye Qt Multimedia.</translation>
     </message>
@@ -480,10 +498,6 @@
     <message>
         <source>Whiteboard background:</source>
         <translation>Fondo de la pizarra:</translation>
-    </message>
-    <message>
-        <source>The screen under the pointer</source>
-        <translation>La pantalla bajo el puntero</translation>
     </message>
     <message>
         <source>All screens</source>
@@ -556,14 +570,6 @@ al ratón con:</translation>
         <translation>Borrar todo</translation>
     </message>
     <message>
-        <source>Spotlight pointer</source>
-        <translation>Foco en el puntero</translation>
-    </message>
-    <message>
-        <source>Highlight pointer (halo)</source>
-        <translation>Resaltar el puntero (halo)</translation>
-    </message>
-    <message>
         <source>Screenshot</source>
         <translation>Captura de pantalla</translation>
     </message>
@@ -584,20 +590,12 @@ al ratón con:</translation>
         <translation>Grabar un recuadro o ventana</translation>
     </message>
     <message>
-        <source>Screen under the pointer</source>
-        <translation>Pantalla bajo el puntero</translation>
-    </message>
-    <message>
         <source>All screens (one image)</source>
         <translation>Todas las pantallas (una imagen)</translation>
     </message>
     <message>
         <source>Region or window…</source>
         <translation>Recuadro o ventana…</translation>
-    </message>
-    <message>
-        <source>Follow the pointer across screens</source>
-        <translation>Seguir al puntero entre pantallas</translation>
     </message>
     <message>
         <source>All screens (one video per screen)</source>
@@ -658,6 +656,58 @@ al ratón con:</translation>
     <message>
         <source>Rows:</source>
         <translation>Filas:</translation>
+    </message>
+    <message>
+        <source>Other targets are always at hand: use the menu of the screenshot and record buttons of the toolbar (see the Toolbar tab), or the tray menu.</source>
+        <translation>Los demás destinos están siempre a mano: usa el menú de los botones de captura y grabación de la barra (ver la pestaña Barra de herramientas) o el menú de la bandeja.</translation>
+    </message>
+    <message>
+        <source>Clicking the button</source>
+        <translation>Al hacer clic en el botón</translation>
+    </message>
+    <message>
+        <source>Right-clicking the button</source>
+        <translation>Con el clic derecho en el botón</translation>
+    </message>
+    <message>
+        <source>Buttons with several options (whiteboard, screenshot, record). Right-clicking always opens the menu; with the second option a plain click runs the default target instead.</source>
+        <translation>Botones con varias opciones (pizarra, captura, grabación). El clic derecho siempre abre el menú; con la segunda opción, el clic normal ejecuta el destino por defecto.</translation>
+    </message>
+    <message>
+        <source>Open their menu by:</source>
+        <translation>Abrir su menú:</translation>
+    </message>
+    <message>
+        <source>Show the toolbar in screenshots</source>
+        <translation>Mostrar la barra de herramientas en las capturas</translation>
+    </message>
+    <message>
+        <source>Show the toolbar in recordings</source>
+        <translation>Mostrar la barra de herramientas en los vídeos</translation>
+    </message>
+    <message>
+        <source>Only Windows can keep a window out of captures; on Linux and macOS the toolbar always appears.</source>
+        <translation>Solo Windows puede dejar una ventana fuera de las capturas; en Linux y macOS la barra siempre aparece.</translation>
+    </message>
+    <message>
+        <source>The screen under the cursor</source>
+        <translation>La pantalla bajo el cursor</translation>
+    </message>
+    <message>
+        <source>Spotlight cursor</source>
+        <translation>Foco en el cursor</translation>
+    </message>
+    <message>
+        <source>Highlight cursor (halo)</source>
+        <translation>Resaltar el cursor (halo)</translation>
+    </message>
+    <message>
+        <source>Screen under the cursor</source>
+        <translation>Pantalla bajo el cursor</translation>
+    </message>
+    <message>
+        <source>Follow the cursor across screens</source>
+        <translation>Seguir al cursor entre pantallas</translation>
     </message>
 </context>
 <context>
@@ -731,14 +781,6 @@ al ratón con:</translation>
         <translation>Reproducir el dibujo</translation>
     </message>
     <message>
-        <source>Spotlight pointer</source>
-        <translation>Foco en el puntero</translation>
-    </message>
-    <message>
-        <source>Highlight pointer</source>
-        <translation>Resaltar el puntero</translation>
-    </message>
-    <message>
         <source>Screenshot</source>
         <translation>Captura de pantalla</translation>
     </message>
@@ -783,8 +825,20 @@ al ratón con:</translation>
         <translation>Configuración</translation>
     </message>
     <message>
-        <source>Minimize</source>
-        <translation>Minimizar</translation>
+        <source>Collapse to the edge</source>
+        <translation>Plegar contra el borde</translation>
+    </message>
+    <message>
+        <source>Show the toolbar</source>
+        <translation>Mostrar la barra de herramientas</translation>
+    </message>
+    <message>
+        <source>Spotlight cursor</source>
+        <translation>Foco en el cursor</translation>
+    </message>
+    <message>
+        <source>Highlight cursor</source>
+        <translation>Resaltar el cursor</translation>
     </message>
 </context>
 </TS>

@@ -13,8 +13,12 @@
 #include "ui/TrayIcon.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QLoggingCategory>
@@ -24,6 +28,7 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QUndoStack>
+#include <QUrl>
 
 Q_LOGGING_CATEGORY(lcApp, "recrayon.app")
 
@@ -97,11 +102,21 @@ Application::Application(QObject* parent) : QObject(parent), m_tools(m_desktopDo
     m_overlays->setSharedActions({m_actions.undo, m_actions.redo});
 
     createCaptureActions();
+    // Screenshots and recordings decide whether the toolbar shows up in them (Settings).
+    m_capture->setToolbarExclusion([this](bool excluded) {
+        m_toolbarExcludedFromCapture = excluded;
+        if (m_toolbar && m_toolbar->windowHandle()) {
+            platform::setExcludedFromCapture(m_toolbar->windowHandle(), excluded);
+        }
+    });
 
     rebuildToolbar();
 
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
         m_tray = std::make_unique<TrayIcon>(m_actions);
+        // Clicking "screenshot saved" / "recording saved" opens the folder it went to.
+        connect(m_tray.get(), &QSystemTrayIcon::messageClicked, this,
+                &Application::openNotificationFile);
     } else {
         qCInfo(lcApp) << "No system tray available; the toolbar can be minimized but not hidden";
         m_actions.toggleToolbar->setEnabled(false);
@@ -151,6 +166,17 @@ void Application::createActions() {
         }
     });
 
+    m_actions.collapseToolbar =
+        new QAction(icons::icon(IconId::Collapse), tr("Collapse the toolbar"), this);
+    m_actions.collapseToolbar->setToolTip(
+        tr("Collapse the toolbar against the nearest edge; the arrow brings it back. Handy to "
+           "keep it out of the way (and out of captures where it cannot be hidden)."));
+    connect(m_actions.collapseToolbar, &QAction::triggered, this, [this] {
+        if (m_toolbar) {
+            m_toolbar->setCollapsed(true);
+        }
+    });
+
     m_actions.minimize = new QAction(icons::icon(IconId::Minimize), tr("Minimize"), this);
     m_actions.minimize->setToolTip(
         tr("Minimize: Recrayon keeps running; open it again from the taskbar or the tray icon"));
@@ -167,7 +193,7 @@ void Application::createActions() {
         }
     });
     m_whiteboardMenu = std::make_unique<QMenu>(tr("Whiteboard on"));
-    m_whiteboardMenu->addAction(tr("The screen under the pointer"), this,
+    m_whiteboardMenu->addAction(tr("The screen under the cursor"), this,
                                 [this] { showWhiteboard(WhiteboardScope::ScreenUnderCursor); });
     m_whiteboardMenu->addAction(tr("All screens"), this,
                                 [this] { showWhiteboard(WhiteboardScope::AllScreens); });
@@ -203,14 +229,14 @@ void Application::createActions() {
     });
 
     m_actions.toggleSpotlight =
-        new QAction(icons::icon(IconId::Spotlight), tr("Spotlight pointer"), this);
+        new QAction(icons::icon(IconId::Spotlight), tr("Spotlight cursor"), this);
     m_actions.toggleSpotlight->setCheckable(true);
     connect(m_actions.toggleSpotlight, &QAction::toggled, this, [this](bool on) {
         m_pointerHighlight.setMode(on ? PointerHighlightMode::Spotlight
                                       : PointerHighlightMode::Off);
     });
 
-    m_actions.toggleHalo = new QAction(icons::icon(IconId::Halo), tr("Highlight pointer"), this);
+    m_actions.toggleHalo = new QAction(icons::icon(IconId::Halo), tr("Highlight cursor"), this);
     m_actions.toggleHalo->setCheckable(true);
     connect(m_actions.toggleHalo, &QAction::toggled, this, [this](bool on) {
         m_pointerHighlight.setMode(on ? PointerHighlightMode::Halo : PointerHighlightMode::Off);
@@ -235,9 +261,10 @@ void Application::createActions() {
 void Application::createCaptureActions() {
     m_capture = std::make_unique<CaptureController>(
         m_settings, *m_overlays, m_pointerHighlight, m_picker,
-        [this](const QString& title, const QString& message, bool warning) {
+        [this](const QString& title, const QString& message, bool warning,
+               const QString& fileToReveal) {
             notify(title, message,
-                   warning ? QSystemTrayIcon::Warning : QSystemTrayIcon::Information);
+                   warning ? QSystemTrayIcon::Warning : QSystemTrayIcon::Information, fileToReveal);
         });
     m_capture->createActions(m_actions);
 
@@ -245,6 +272,12 @@ void Application::createCaptureActions() {
     m_shortcutBindings.push_back({ShortcutId::ScreenshotRegion, m_actions.screenshotRegion});
     m_shortcutBindings.push_back({ShortcutId::Recording, m_actions.toggleRecording});
     m_shortcutBindings.push_back({ShortcutId::RecordRegion, m_actions.recordRegion});
+}
+
+QString Application::menuHint() const {
+    return m_settings.toolbarMenuTrigger == ToolbarMenuTrigger::LeftClick
+               ? tr("click its toolbar button for other options")
+               : tr("right-click its toolbar button for other options");
 }
 
 QString Application::describe(ShortcutId id) const {
@@ -258,12 +291,12 @@ QString Application::describe(ShortcutId id) const {
     case ShortcutId::Clear:
         return tr("Clear all");
     case ShortcutId::Spotlight:
-        return tr("Spotlight — dim everything except the area around the pointer");
+        return tr("Spotlight — dim everything except the area around the cursor");
     case ShortcutId::Halo:
-        return tr("Highlight the pointer with a halo");
+        return tr("Highlight the cursor with a halo");
     case ShortcutId::Screenshot:
-        return tr("Screenshot: %1 — right-click for other options")
-            .arg(SettingsDialog::targetLabel(m_settings.screenshotTarget));
+        return tr("Screenshot: %1 — %2")
+            .arg(SettingsDialog::targetLabel(m_settings.screenshotTarget), menuHint());
     case ShortcutId::ScreenshotRegion:
         return tr("Screenshot of a region or window");
     case ShortcutId::Replay:
@@ -272,8 +305,8 @@ QString Application::describe(ShortcutId id) const {
         if (!m_capture || !m_capture->isRecordingAvailable()) {
             return tr("Recording unavailable: built without Qt Multimedia");
         }
-        return tr("Record: %1 — right-click for other options")
-            .arg(SettingsDialog::targetLabel(m_settings.recordingTarget));
+        return tr("Record: %1 — %2")
+            .arg(SettingsDialog::targetLabel(m_settings.recordingTarget), menuHint());
     case ShortcutId::RecordRegion:
         return tr("Record a region or window");
     }
@@ -285,8 +318,12 @@ void Application::start() {
     placeToolbar();
     m_toolbar->show();
     m_toolbar->raise();
-    if (!platform::setExcludedFromCapture(m_toolbar->windowHandle(), true)) {
-        qCInfo(lcApp) << "The toolbar will be visible in screenshots and recordings";
+    if (m_session.toolbarCollapsed) {
+        m_toolbar->setCollapsed(true); // left collapsed against an edge last time
+    }
+    if (!platform::setExcludedFromCapture(m_toolbar->windowHandle(),
+                                          m_toolbarExcludedFromCapture)) {
+        qCInfo(lcApp) << "This system cannot keep the toolbar out of screenshots and recordings";
     }
     registerHotkeys();
 
@@ -467,6 +504,9 @@ void Application::saveSession() {
         m_session.toolbarPosition = m_toolbar->pos();
     }
     m_session.strokeWidth = m_tools.width();
+    if (m_toolbar) {
+        m_session.toolbarCollapsed = m_toolbar->isCollapsed();
+    }
     m_session.tool = QString::fromLatin1(toolId(m_tools.currentTool()));
     QSettings store;
     m_session.save(store);
@@ -490,7 +530,7 @@ void Application::restoreToolbar() {
     m_toolbar->showNormal();
     m_toolbar->raise();
     m_toolbar->activateWindow();
-    platform::setExcludedFromCapture(m_toolbar->windowHandle(), true);
+    platform::setExcludedFromCapture(m_toolbar->windowHandle(), m_toolbarExcludedFromCapture);
 }
 
 void Application::onToolbarMinimized(bool minimized) {
@@ -505,6 +545,11 @@ void Application::onToolbarMinimized(bool minimized) {
 void Application::raiseToolbar() {
     // Deferred: on Windows the activation that raised the overlay finishes after this call.
     QTimer::singleShot(0, this, [this] {
+        // Opening a menu changes the focus, which brings us here: raising the toolbar then would
+        // put it on top of its own menu (both windows are top-most).
+        if (QApplication::activePopupWidget()) {
+            return;
+        }
         if (m_toolbar && m_toolbar->isVisible() && !m_toolbar->isMinimized()) {
             m_toolbar->raise();
         }
@@ -634,6 +679,10 @@ void Application::rebuildToolbar() {
     connect(m_toolbar.get(), &Toolbar::toolDeselected, this,
             [this] { m_overlays->setMode(InteractionMode::Interact); });
     connect(m_toolbar.get(), &Toolbar::minimizedChanged, this, &Application::onToolbarMinimized);
+    connect(m_toolbar.get(), &Toolbar::collapsedChanged, this, [this](bool collapsed) {
+        m_session.toolbarCollapsed = collapsed;
+        saveSession();
+    });
     connect(m_toolbar.get(), &Toolbar::quitRequested, m_actions.quit, &QAction::trigger);
     auto* escape = new QAction(m_toolbar.get());
     escape->setShortcut(Qt::Key_Escape);
@@ -645,19 +694,38 @@ void Application::rebuildToolbar() {
     m_toolbar->adjustSize();
     m_toolbar->move(position);
     keepToolbarOnScreen(); // a bigger size or another orientation may not fit where it was
+    if (m_session.toolbarCollapsed) {
+        m_toolbar->setCollapsed(true);
+    }
     if (visible) {
         m_toolbar->show();
         m_toolbar->raise();
-        platform::setExcludedFromCapture(m_toolbar->windowHandle(), true);
+        platform::setExcludedFromCapture(m_toolbar->windowHandle(), m_toolbarExcludedFromCapture);
     }
 }
 
 void Application::notify(const QString& title, const QString& message,
-                         QSystemTrayIcon::MessageIcon icon) {
+                         QSystemTrayIcon::MessageIcon icon, const QString& fileToReveal) {
     qCInfo(lcApp).noquote() << title << message;
+    m_notificationFile = fileToReveal;
     if (m_tray) {
         m_tray->showMessage(title, message, icon);
     }
+}
+
+void Application::openNotificationFile() {
+    if (m_notificationFile.isEmpty()) {
+        return;
+    }
+    const QFileInfo file(m_notificationFile);
+#if defined(Q_OS_WIN)
+    // Opens the folder with the file already selected.
+    QProcess::startDetached(
+        QStringLiteral("explorer.exe"),
+        QStringList{QStringLiteral("/select,") + QDir::toNativeSeparators(file.filePath())});
+#else
+    QDesktopServices::openUrl(QUrl::fromLocalFile(file.absolutePath()));
+#endif
 }
 
 } // namespace recrayon

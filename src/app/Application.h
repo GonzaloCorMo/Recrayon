@@ -53,6 +53,8 @@ private:
     /// Returns the shortcuts the OS refused (typically: taken by another application).
     QStringList applyShortcuts();
     /// Tooltip text of a shortcut's action (without the keys).
+    /// How to open the menu of a toolbar button, for the tooltips (depends on the settings).
+    [[nodiscard]] QString menuHint() const;
     [[nodiscard]] QString describe(ShortcutId id) const;
     void openSettings();
     /// Starts a new instance and quits this one (to apply a new language).
@@ -84,8 +86,12 @@ private:
     void applyDrawingSettings();
     /// (Re)creates the toolbar from m_settings, keeping its position.
     void rebuildToolbar();
+    /// System notification. With @p fileToReveal, clicking it opens that file's folder.
+    /// Opens the folder of the file the last notification was about.
+    void openNotificationFile();
     void notify(const QString& title, const QString& message,
-                QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information);
+                QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information,
+                const QString& fileToReveal = {});
 
     // Declaration order matters: members are destroyed in reverse, so windows and services go
     // before the tools and the document they reference.
@@ -107,6 +113,8 @@ private:
     std::unique_ptr<GlobalHotkeys> m_hotkeys;
     std::unique_ptr<QMenu> m_whiteboardMenu;
     bool m_settingsOpen = false;
+    QString m_notificationFile; ///< opened in the file manager if the notification is clicked
+    bool m_toolbarExcludedFromCapture = true; ///< kept for toolbars rebuilt from settings
     bool m_whiteboardActive = false;
     bool m_drawingBeforeReplay = false;
 };

@@ -102,14 +102,21 @@ bandeja.
   arriba cómo salir. Estos avisos no salen en capturas ni vídeos.
 - Selector de área: arrastra un recuadro (puede cruzar pantallas), haz clic en una ventana (se
   resalta al pasar por encima) o en el escritorio para la pantalla entera.
-- Botones de captura y grabación: clic = destino por defecto; clic derecho = elegir destino o
-  **abrir la carpeta** donde se guardan (`Imágenes\Recrayon`, `Vídeos\Recrayon` o la que elijas).
+- Botones con varias opciones (pizarra, captura, grabación): el clic abre su menú para elegir
+  destino o **abrir la carpeta** donde se guardan (`Imágenes\Recrayon`, `Vídeos\Recrayon` o la
+  que elijas). En Configuración puedes dejar que el clic ejecute el destino por defecto y que el
+  menú lo abra el clic derecho.
 - Grabación MP4/H.264 a 30 fps, calidad *Máxima*, *Alta* o *Compacta*; el tiempo en pausa no
   entra en el vídeo; la ventana grabada se sigue si se mueve.
 - **Cursor del ratón** en capturas y vídeos, opcional.
 - **Configuración**: idioma, atajos globales, destinos y carpetas, calidad de vídeo y micrófono,
   fuente y tamaño del texto, paleta, color inicial, color de la pizarra, velocidad de
   reproducción, "volver al ratón" y toolbar (elementos, orden, tamaño, orientación, columnas).
+- **Plegar la barra** contra el borde más cercano: queda una pestaña con una flecha para
+  devolverla. Útil para apartarla de la pantalla (y de las capturas en Linux y macOS, donde no
+  se puede ocultar).
+- **Mostrar la barra en las capturas y en los vídeos**: dos opciones independientes
+  (Configuración → Captura). En Windows, por defecto no sale en ninguno de los dos.
 - Herramientas de la toolbar: clic para dibujar; otro clic en la misma para volver al ratón.
 - Atajos globales en Windows: funcionan aunque otra aplicación tenga el foco.
 - En español e inglés: sigue el idioma del sistema o el que elijas.
