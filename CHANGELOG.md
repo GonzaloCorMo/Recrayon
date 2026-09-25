@@ -3,7 +3,7 @@
 Cambios de cada versión de Recrayon. El proyecto sigue
 [Semantic Versioning](https://semver.org/lang/es/).
 
-## [Unreleased]
+## [1.1.0] - 2026-09-25
 
 ### Added
 - **Plegar la barra** contra el borde más cercano: el botón de la barra que antes minimizaba
@@ -24,6 +24,9 @@ Cambios de cada versión de Recrayon. El proyecto sigue
 
 ### Changed
 - Toda la app habla del **cursor** en vez del "puntero".
+- Iconos más claros: la **flecha libre** termina en una punta rellena bien visible, la **flecha
+  con texto** separa la "T" de la flecha, **Ajustes** es una rueda dentada (antes parecía un sol)
+  y los de **plegar** y **minimizar** se entienden a simple vista.
 - Los botones con varias opciones (pizarra, captura, grabación) **abren su menú con el clic**.
   En Configuración → Barra de herramientas puedes volver al comportamiento anterior: el clic
   ejecuta el destino por defecto y el menú se abre con el clic derecho. El clic derecho abre el

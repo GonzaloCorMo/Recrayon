@@ -9,7 +9,7 @@
 Anota encima de cualquier aplicación, en todos tus monitores, y vuelve a trabajar con un clic.
 Pensado para presentaciones, clases, demos en vivo y grabaciones de pantalla.
 
-[![Versión](https://img.shields.io/badge/versión-1.0.0-2f81f7)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-1.1.0-2f81f7)](CHANGELOG.md)
 [![Plataformas](https://img.shields.io/badge/Windows%20·%20Linux%20·%20macOS-555)](#descargar)
 [![Licencia](https://img.shields.io/badge/licencia-CC%20BY--NC--ND%204.0-lightgrey)](LICENSE)
 [![Qt 6](https://img.shields.io/badge/Qt-6.8-41cd52?logo=qt&logoColor=white)](https://www.qt.io/)
@@ -77,11 +77,15 @@ directo y en grabaciones.
 ### Una toolbar a tu medida
 
 Elige qué botones muestra y en qué orden, su tamaño, si es vertical u horizontal y cuántas
-columnas o filas tiene. Recuerda su posición, el grosor y la herramienta entre sesiones. Se puede
-**minimizar**: Recrayon sigue en segundo plano y vuelve desde la barra de tareas o el icono de la
-bandeja.
+columnas o filas tiene. Recuerda su posición, el grosor y la herramienta entre sesiones.
+
+Cuando estorbe, **pliégala** contra el borde más cercano: queda una pestaña con una flecha que la
+devuelve, y que también se puede arrastrar. Tus anotaciones siguen en pantalla. Desde el icono de
+la bandeja puedes además minimizarla a la barra de tareas o esconderla del todo.
 
 <img src="docs/media/toolbar-horizontal.png" width="860" alt="Toolbar horizontal y compacta en la parte superior de la pantalla">
+
+<img src="docs/media/toolbar-collapsed.png" width="860" alt="La toolbar plegada: solo una pestaña con una flecha en el borde derecho">
 
 <p align="center">
   <img src="docs/media/settings-toolbar.png" width="560" alt="Configuración de la toolbar: tamaño, orientación, columnas y orden de los elementos">
