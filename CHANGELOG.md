@@ -19,6 +19,8 @@ Cambios de cada versión de Recrayon. El proyecto sigue
   una ventana fuera de las capturas.
 
 ### Fixed
+- Las teclas **1…9, 0 y M** no cambiaban de herramienta después de pulsar un botón de la barra:
+  el foco se quedaba en ella y las teclas se perdían. Ahora la barra también las atiende.
 - Los menús de los botones con varias opciones podían quedar **detrás de la barra**: al abrirse
   cambiaba el foco y la barra se ponía delante de su propio menú.
 
