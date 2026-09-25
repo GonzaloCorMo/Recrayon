@@ -103,6 +103,12 @@ enum class ToolbarOrientation {
     Horizontal, ///< a row of sections, left to right
 };
 
+/// How the menu of a toolbar button with several options (whiteboard, screenshot, record) opens.
+enum class ToolbarMenuTrigger {
+    LeftClick,  ///< a plain click opens the menu (default)
+    RightClick, ///< a click runs the default target; right click (or press and hold) opens it
+};
+
 /// Pixel sizes of a ToolbarSize.
 struct ToolbarMetrics {
     int buttonSize = 34;
@@ -133,6 +139,11 @@ struct Settings {
 
     /// Draw the real mouse cursor into screenshots and recordings.
     bool showCursorInCaptures = true;
+
+    /// Let the toolbar appear in screenshots / in recordings (it is hidden from both by default).
+    /// Only Windows can keep a window out of captures; elsewhere the toolbar always shows.
+    bool showToolbarInScreenshots = false;
+    bool showToolbarInRecordings = false;
 
     ScreenshotTarget screenshotTarget = ScreenshotTarget::ScreenUnderCursor;
     RecordingTarget recordingTarget = RecordingTarget::ScreenUnderCursor;
@@ -191,6 +202,7 @@ struct Settings {
     ToolbarOrientation toolbarOrientation = ToolbarOrientation::Vertical;
     /// kMinToolbarLanes..kMaxToolbarLanes.
     int toolbarLanes = 2;
+    ToolbarMenuTrigger toolbarMenuTrigger = ToolbarMenuTrigger::LeftClick;
 
     [[nodiscard]] bool isToolbarItemVisible(const QString& id) const {
         return !hiddenToolbarItems.contains(id);

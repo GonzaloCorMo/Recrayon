@@ -211,7 +211,22 @@ bool CaptureController::isRecording() const {
 #endif
 }
 
+void CaptureController::setToolbarExclusion(ExclusionSetter setter) {
+    m_setToolbarExcluded = std::move(setter);
+    applyToolbarExclusion();
+}
+
+void CaptureController::applyToolbarExclusion(bool forScreenshot) {
+    if (!m_setToolbarExcluded) {
+        return;
+    }
+    const bool show = forScreenshot ? m_settings.showToolbarInScreenshots
+                                    : isRecording() && m_settings.showToolbarInRecordings;
+    m_setToolbarExcluded(!show);
+}
+
 void CaptureController::applySettings() {
+    applyToolbarExclusion();
     if (isRecording()) {
         m_pointerHighlight.setCursorReplicaEnabled(m_settings.showCursorInCaptures);
     }
@@ -237,11 +252,13 @@ void CaptureController::captureNativeArea(const QRect& nativeArea) {
     // Hide the draw-mode frame (a UI hint, not content) and give the compositor a moment to
     // show that, and the end of the picker, before grabbing.
     m_overlays.setDrawModeFrameVisible(false);
+    applyToolbarExclusion(/*forScreenshot=*/true);
     QTimer::singleShot(kScreenshotSettleMs, this, [this, nativeArea] {
         capture::Grab grab = capture::grabNativeArea(nativeArea);
         m_overlays.setDrawModeFrameVisible(!isRecording());
+        applyToolbarExclusion(); // back to what the running recording (if any) asks for
         if (grab.image.isNull()) {
-            m_notify(tr("Screenshot failed"), tr("Could not grab the screen."), true);
+            m_notify(tr("Screenshot failed"), tr("Could not grab the screen."), true, {});
             return;
         }
         // While recording with the cursor option, the overlays already show a cursor replica.
@@ -256,12 +273,13 @@ void CaptureController::captureNativeArea(const QRect& nativeArea) {
         }
         const QString path = capture::newScreenshotPath(m_settings.screenshotFolder());
         if (!grab.image.save(path)) {
-            m_notify(tr("Screenshot failed"), tr("Could not write %1").arg(path), true);
+            m_notify(tr("Screenshot failed"), tr("Could not write %1").arg(path), true, {});
             return;
         }
         QGuiApplication::clipboard()->setImage(grab.image);
-        m_notify(tr("Screenshot saved and copied to the clipboard"), QDir::toNativeSeparators(path),
-                 false);
+        m_notify(tr("Screenshot saved and copied to the clipboard"),
+                 tr("%1\nClick to open the folder").arg(QDir::toNativeSeparators(path)), false,
+                 path);
     });
 }
 
@@ -339,7 +357,7 @@ void CaptureController::startRecording(RecordingTarget target) {
     const QAudioDevice microphone = microphoneFor(m_settings);
     m_withMicrophone = !microphone.isNull();
     if (m_settings.recordMicrophone && !m_withMicrophone) {
-        m_notify(tr("No microphone found"), tr("Recording without audio."), true);
+        m_notify(tr("No microphone found"), tr("Recording without audio."), true, {});
     }
     const DesktopLayout layout = platform::currentDesktopLayout();
 
@@ -422,6 +440,7 @@ void CaptureController::onRecordingChanged() {
         m_paused = false;
     }
     m_overlays.setDrawModeFrameVisible(!recording);
+    applyToolbarExclusion();
 #if RECRAYON_HAS_RECORDING
     // Native screen capture only delivers frames when the screen changes; the composed
     // recorder resends its last frames by itself.
@@ -446,12 +465,13 @@ void CaptureController::onRecordingFinished(const QStringList& paths) {
                    [](const QString& path) { return QDir::toNativeSeparators(path); });
     m_notify(paths.size() == 1 ? tr("Recording saved")
                                : tr("%1 recordings saved").arg(paths.size()),
-             native.join(QLatin1Char('\n')), false);
+             tr("%1\nClick to open the folder").arg(native.join(QLatin1Char('\n'))), false,
+             paths.value(0));
 }
 
 void CaptureController::onRecordingError(const QString& message) {
     qCWarning(lcCapture) << "Recording failed:" << message;
-    m_notify(tr("Recording failed"), message, true);
+    m_notify(tr("Recording failed"), message, true, {});
 }
 
 void CaptureController::setRecordingChecked(bool checked) {

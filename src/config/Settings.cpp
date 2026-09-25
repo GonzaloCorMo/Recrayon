@@ -14,6 +14,8 @@ namespace {
 constexpr auto kShortcutsGroup = "shortcuts";
 constexpr auto kLanguageKey = "general/language";
 constexpr auto kShowCursorKey = "capture/showCursor";
+constexpr auto kToolbarInScreenshotsKey = "capture/showToolbarInScreenshots";
+constexpr auto kToolbarInRecordingsKey = "capture/showToolbarInRecordings";
 constexpr auto kScreenshotTargetKey = "capture/screenshotTarget";
 constexpr auto kRecordingTargetKey = "capture/recordingTarget";
 constexpr auto kScreenshotDirKey = "capture/screenshotDirectory";
@@ -34,6 +36,7 @@ constexpr auto kToolbarOrderKey = "toolbar/order";
 constexpr auto kToolbarSizeKey = "toolbar/size";
 constexpr auto kToolbarOrientationKey = "toolbar/orientation";
 constexpr auto kToolbarLanesKey = "toolbar/lanes";
+constexpr auto kToolbarMenuTriggerKey = "toolbar/menuTrigger";
 
 constexpr int kMinTextPixelSize = 8;
 constexpr int kMaxTextPixelSize = 200;
@@ -84,6 +87,11 @@ constexpr NameTable<ToolbarSize, 3> kToolbarSizeNames{{
 constexpr NameTable<ToolbarOrientation, 2> kToolbarOrientationNames{{
     {ToolbarOrientation::Vertical, "vertical"},
     {ToolbarOrientation::Horizontal, "horizontal"},
+}};
+
+constexpr NameTable<ToolbarMenuTrigger, 2> kToolbarMenuTriggerNames{{
+    {ToolbarMenuTrigger::LeftClick, "left"},
+    {ToolbarMenuTrigger::RightClick, "right"},
 }};
 
 template <typename Enum, std::size_t N>
@@ -239,6 +247,12 @@ Settings Settings::load(QSettings& store) {
 
     settings.showCursorInCaptures =
         store.value(QLatin1String(kShowCursorKey), settings.showCursorInCaptures).toBool();
+    settings.showToolbarInScreenshots =
+        store.value(QLatin1String(kToolbarInScreenshotsKey), settings.showToolbarInScreenshots)
+            .toBool();
+    settings.showToolbarInRecordings =
+        store.value(QLatin1String(kToolbarInRecordingsKey), settings.showToolbarInRecordings)
+            .toBool();
     settings.screenshotTarget =
         valueOf(kScreenshotTargetNames, store.value(QLatin1String(kScreenshotTargetKey)).toString(),
                 settings.screenshotTarget);
@@ -303,6 +317,9 @@ Settings Settings::load(QSettings& store) {
     settings.toolbarLanes =
         std::clamp(store.value(QLatin1String(kToolbarLanesKey), settings.toolbarLanes).toInt(),
                    kMinToolbarLanes, kMaxToolbarLanes);
+    settings.toolbarMenuTrigger = valueOf(
+        kToolbarMenuTriggerNames, store.value(QLatin1String(kToolbarMenuTriggerKey)).toString(),
+        settings.toolbarMenuTrigger);
     return settings;
 }
 
@@ -316,6 +333,8 @@ void Settings::save(QSettings& store) const {
     store.endGroup();
 
     store.setValue(QLatin1String(kShowCursorKey), showCursorInCaptures);
+    store.setValue(QLatin1String(kToolbarInScreenshotsKey), showToolbarInScreenshots);
+    store.setValue(QLatin1String(kToolbarInRecordingsKey), showToolbarInRecordings);
     store.setValue(QLatin1String(kScreenshotTargetKey),
                    nameOf(kScreenshotTargetNames, screenshotTarget));
     store.setValue(QLatin1String(kRecordingTargetKey),
@@ -345,6 +364,8 @@ void Settings::save(QSettings& store) const {
     store.setValue(QLatin1String(kToolbarOrientationKey),
                    nameOf(kToolbarOrientationNames, toolbarOrientation));
     store.setValue(QLatin1String(kToolbarLanesKey), toolbarLanes);
+    store.setValue(QLatin1String(kToolbarMenuTriggerKey),
+                   nameOf(kToolbarMenuTriggerNames, toolbarMenuTrigger));
     store.setValue(QLatin1String(kReturnToCursorKey), returnToCursorTools);
     store.setValue(QLatin1String(kReplaySpeedKey),
                    replaySpeed == ReplaySpeed::Slow   ? QStringLiteral("slow")

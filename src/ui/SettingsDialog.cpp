@@ -246,10 +246,19 @@ QWidget* SettingsDialog::createCapturePage(bool recordingAvailable,
     form->addRow(tr("Save videos in:"),
                  makeFolderRow(m_recordingDir, Settings::defaultRecordingDirectory(),
                                tr("Folder for videos"), page));
+    m_toolbarInScreenshots = new QCheckBox(tr("Show the toolbar in screenshots"), page);
+    m_toolbarInRecordings = new QCheckBox(tr("Show the toolbar in recordings"), page);
+    m_toolbarInRecordings->setEnabled(recordingAvailable);
+    for (QCheckBox* box : {m_toolbarInScreenshots, m_toolbarInRecordings}) {
+        box->setToolTip(tr("Only Windows can keep a window out of captures; on Linux and macOS "
+                           "the toolbar always appears."));
+        form->addRow(QString(), box);
+    }
+
     layout->addLayout(form);
-    layout->addWidget(makeHint(tr("Other targets are always one click away: right-click (or "
-                                  "press and hold) the screenshot and record buttons of the "
-                                  "toolbar, or use the tray menu."),
+    layout->addWidget(makeHint(tr("Other targets are always at hand: use the menu of the "
+                                  "screenshot and record buttons of the toolbar (see the Toolbar "
+                                  "tab), or the tray menu."),
                                page));
 
     if (!recordingAvailable) {
@@ -319,7 +328,7 @@ QWidget* SettingsDialog::createDrawingPage() {
     form->addRow(tr("Whiteboard background:"), m_whiteboardButton);
 
     m_whiteboardScope = new QComboBox(page);
-    m_whiteboardScope->addItem(tr("The screen under the pointer"),
+    m_whiteboardScope->addItem(tr("The screen under the cursor"),
                                static_cast<int>(WhiteboardScope::ScreenUnderCursor));
     m_whiteboardScope->addItem(tr("All screens"), static_cast<int>(WhiteboardScope::AllScreens));
     form->addRow(tr("Whiteboard covers:"), m_whiteboardScope);
@@ -386,6 +395,17 @@ QWidget* SettingsDialog::createToolbarPage() {
     form->addRow(m_toolbarLanesLabel, m_toolbarLanes);
     connect(m_toolbarOrientation, &QComboBox::currentIndexChanged, this,
             &SettingsDialog::updateLanesLabel);
+
+    // Whiteboard, screenshot and record have a menu with the other targets.
+    m_toolbarMenuTrigger = new QComboBox(page);
+    m_toolbarMenuTrigger->addItem(tr("Clicking the button"),
+                                  static_cast<int>(ToolbarMenuTrigger::LeftClick));
+    m_toolbarMenuTrigger->addItem(tr("Right-clicking the button"),
+                                  static_cast<int>(ToolbarMenuTrigger::RightClick));
+    m_toolbarMenuTrigger->setToolTip(tr(
+        "Buttons with several options (whiteboard, screenshot, record). Right-clicking always "
+        "opens the menu; with the second option a plain click runs the default target instead."));
+    form->addRow(tr("Open their menu by:"), m_toolbarMenuTrigger);
     layout->addLayout(form);
 
     layout->addWidget(makeHint(tr("Check what the toolbar shows and drag the items (or use the "
@@ -496,6 +516,8 @@ void SettingsDialog::load(const Settings& settings) {
     }
     m_language->setCurrentIndex(std::max(0, m_language->findData(settings.language)));
     m_showCursor->setChecked(settings.showCursorInCaptures);
+    m_toolbarInScreenshots->setChecked(settings.showToolbarInScreenshots);
+    m_toolbarInRecordings->setChecked(settings.showToolbarInRecordings);
     m_recordMicrophone->setChecked(settings.recordMicrophone);
     m_microphone->setEnabled(settings.recordMicrophone && m_recordMicrophone->isEnabled());
     // A microphone that is not connected now keeps its id until the user picks another one.
@@ -534,6 +556,7 @@ void SettingsDialog::load(const Settings& settings) {
     selectData(m_toolbarSize, settings.toolbarSize);
     selectData(m_toolbarOrientation, settings.toolbarOrientation);
     m_toolbarLanes->setValue(settings.toolbarLanes);
+    selectData(m_toolbarMenuTrigger, settings.toolbarMenuTrigger);
     updateLanesLabel();
     fillToolbarItems(orderedToolbarItems(Toolbar::defaultItemOrder(), settings.toolbarOrder),
                      settings.hiddenToolbarItems);
@@ -546,6 +569,8 @@ Settings SettingsDialog::settings() const {
     }
     result.language = m_language->currentData().toString();
     result.showCursorInCaptures = m_showCursor->isChecked();
+    result.showToolbarInScreenshots = m_toolbarInScreenshots->isChecked();
+    result.showToolbarInRecordings = m_toolbarInRecordings->isChecked();
     result.recordMicrophone = m_recordMicrophone->isChecked();
     result.microphoneId = m_microphone->currentData().toString();
     result.screenshotTarget = selectedData<ScreenshotTarget>(m_screenshotTarget);
@@ -577,6 +602,7 @@ Settings SettingsDialog::settings() const {
     result.toolbarSize = selectedData<ToolbarSize>(m_toolbarSize);
     result.toolbarOrientation = selectedData<ToolbarOrientation>(m_toolbarOrientation);
     result.toolbarLanes = m_toolbarLanes->value();
+    result.toolbarMenuTrigger = selectedData<ToolbarMenuTrigger>(m_toolbarMenuTrigger);
     return result;
 }
 
@@ -624,9 +650,9 @@ QString SettingsDialog::shortcutLabel(ShortcutId id) {
     case ShortcutId::Clear:
         return tr("Clear all");
     case ShortcutId::Spotlight:
-        return tr("Spotlight pointer");
+        return tr("Spotlight cursor");
     case ShortcutId::Halo:
-        return tr("Highlight pointer (halo)");
+        return tr("Highlight cursor (halo)");
     case ShortcutId::Screenshot:
         return tr("Screenshot");
     case ShortcutId::ScreenshotRegion:
@@ -644,7 +670,7 @@ QString SettingsDialog::shortcutLabel(ShortcutId id) {
 QString SettingsDialog::targetLabel(ScreenshotTarget target) {
     switch (target) {
     case ScreenshotTarget::ScreenUnderCursor:
-        return tr("Screen under the pointer");
+        return tr("Screen under the cursor");
     case ScreenshotTarget::AllScreens:
         return tr("All screens (one image)");
     case ScreenshotTarget::RegionOrWindow:
@@ -656,9 +682,9 @@ QString SettingsDialog::targetLabel(ScreenshotTarget target) {
 QString SettingsDialog::targetLabel(RecordingTarget target) {
     switch (target) {
     case RecordingTarget::ScreenUnderCursor:
-        return tr("Screen under the pointer");
+        return tr("Screen under the cursor");
     case RecordingTarget::FollowCursor:
-        return tr("Follow the pointer across screens");
+        return tr("Follow the cursor across screens");
     case RecordingTarget::AllScreensSeparate:
         return tr("All screens (one video per screen)");
     case RecordingTarget::AllScreensCombined:

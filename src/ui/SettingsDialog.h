@@ -61,6 +61,8 @@ private:
 
     std::array<QKeySequenceEdit*, kShortcutCount> m_shortcutEdits{};
     QCheckBox* m_showCursor = nullptr;
+    QCheckBox* m_toolbarInScreenshots = nullptr;
+    QCheckBox* m_toolbarInRecordings = nullptr;
     QComboBox* m_screenshotTarget = nullptr;
     QComboBox* m_recordingTarget = nullptr;
     QComboBox* m_videoPreset = nullptr;
@@ -84,6 +86,7 @@ private:
     QComboBox* m_toolbarSize = nullptr;
     QComboBox* m_toolbarOrientation = nullptr;
     QSpinBox* m_toolbarLanes = nullptr;
+    QComboBox* m_toolbarMenuTrigger = nullptr;
     QLabel* m_toolbarLanesLabel = nullptr;
 };
 

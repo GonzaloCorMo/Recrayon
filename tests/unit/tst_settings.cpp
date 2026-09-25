@@ -19,6 +19,9 @@ private slots:
             QVERIFY(isSafeGlobalShortcut(settings.shortcut(id)));
         }
         QVERIFY(settings.showCursorInCaptures);
+        // The toolbar stays out of screenshots and recordings unless the user asks for it.
+        QVERIFY(!settings.showToolbarInScreenshots);
+        QVERIFY(!settings.showToolbarInRecordings);
         QCOMPARE(settings.screenshotTarget, ScreenshotTarget::ScreenUnderCursor);
         QCOMPARE(settings.recordingTarget, RecordingTarget::ScreenUnderCursor);
     }
@@ -32,6 +35,7 @@ private slots:
         original.setShortcut(ShortcutId::Screenshot, QKeySequence(Qt::META | Qt::Key_F9));
         original.setShortcut(ShortcutId::Halo, QKeySequence()); // disabled on purpose
         original.showCursorInCaptures = false;
+        original.showToolbarInScreenshots = true;
         original.screenshotTarget = ScreenshotTarget::RegionOrWindow;
         original.recordingTarget = RecordingTarget::AllScreensCombined;
         {
@@ -227,6 +231,8 @@ private slots:
         QCOMPARE(defaults.toolbarSize, ToolbarSize::Normal);
         QCOMPARE(defaults.toolbarOrientation, ToolbarOrientation::Vertical);
         QCOMPARE(defaults.toolbarLanes, 2);
+        // A plain click opens the menu of the buttons that have one.
+        QCOMPARE(defaults.toolbarMenuTrigger, ToolbarMenuTrigger::LeftClick);
         QVERIFY(defaults.toolbarOrder.isEmpty());
         // Normal is the size the toolbar always had.
         QCOMPARE(toolbarMetrics(ToolbarSize::Normal), (ToolbarMetrics{34, 22}));
@@ -246,6 +252,7 @@ private slots:
         original.toolbarOrientation = ToolbarOrientation::Horizontal;
         original.toolbarLanes = 3;
         original.toolbarOrder = {QStringLiteral("undo"), QStringLiteral("tool.pen")};
+        original.toolbarMenuTrigger = ToolbarMenuTrigger::RightClick;
         {
             QSettings store(path, QSettings::IniFormat);
             original.save(store);
@@ -256,12 +263,14 @@ private slots:
             store.setValue(QStringLiteral("toolbar/size"), QStringLiteral("huge"));
             store.setValue(QStringLiteral("toolbar/orientation"), QStringLiteral("diagonal"));
             store.setValue(QStringLiteral("toolbar/lanes"), 9);
+            store.setValue(QStringLiteral("toolbar/menuTrigger"), QStringLiteral("middle"));
         }
         QSettings store(path, QSettings::IniFormat);
         const Settings loaded = Settings::load(store);
         QCOMPARE(loaded.toolbarSize, ToolbarSize::Normal);
         QCOMPARE(loaded.toolbarOrientation, ToolbarOrientation::Vertical);
         QCOMPARE(loaded.toolbarLanes, kMaxToolbarLanes);
+        QCOMPARE(loaded.toolbarMenuTrigger, ToolbarMenuTrigger::LeftClick);
     }
 
     void toolbarOrderKeepsUserOrderAndPlacesNewItems() {

@@ -40,8 +40,10 @@ class CaptureController final : public QObject {
     Q_OBJECT
 
 public:
-    using Notifier =
-        std::function<void(const QString& title, const QString& message, bool warning)>;
+    /// Shows a system notification. @p fileToReveal, when set, is the file the notification
+    /// opens in the file manager if the user clicks it.
+    using Notifier = std::function<void(const QString& title, const QString& message, bool warning,
+                                        const QString& fileToReveal)>;
 
     CaptureController(const Settings& settings, OverlayManager& overlays,
                       PointerHighlight& pointerHighlight, RegionPicker& picker, Notifier notify,
@@ -56,7 +58,12 @@ public:
     [[nodiscard]] static QList<SettingsDialog::Microphone> microphones();
     [[nodiscard]] bool isRecording() const;
 
-    /// Re-applies settings that affect an ongoing recording (cursor option).
+    /// Keeps the toolbar in or out of captures. The application owns the toolbar window, so it
+    /// provides the setter; @p excluded false makes the toolbar visible to captures.
+    using ExclusionSetter = std::function<void(bool excluded)>;
+    void setToolbarExclusion(ExclusionSetter setter);
+
+    /// Re-applies settings that affect an ongoing recording (cursor, toolbar in the video).
     void applySettings();
 
     void takeScreenshot(ScreenshotTarget target);
@@ -79,12 +86,15 @@ private:
     void onRecordingFinished(const QStringList& paths);
     void onRecordingError(const QString& message);
     void setRecordingChecked(bool checked);
+    /// Hides the toolbar from captures unless the settings say otherwise for what is running now.
+    void applyToolbarExclusion(bool forScreenshot = false);
 
     const Settings& m_settings;
     OverlayManager& m_overlays;
     PointerHighlight& m_pointerHighlight;
     RegionPicker& m_picker;
     Notifier m_notify;
+    ExclusionSetter m_setToolbarExcluded;
 
     QAction* m_toggleRecording = nullptr;
     std::unique_ptr<QMenu> m_screenshotMenu;
