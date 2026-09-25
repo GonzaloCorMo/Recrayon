@@ -35,7 +35,8 @@ QPen glyphPen(const QColor& color) {
     return QPen(color, kStroke, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
 }
 
-/// Filled arrow head at @p tip, pointing away from @p from.
+/// Filled arrow head at @p tip, pointing away from @p from. Every arrow in the set uses it, so
+/// they all end the same way.
 void drawArrowHead(QPainter& p, const QPointF& from, const QPointF& tip, qreal size,
                    const QColor& color) {
     const geometry::ArrowHead head = geometry::arrowHead(tip, from, size);
@@ -45,20 +46,35 @@ void drawArrowHead(QPainter& p, const QPointF& from, const QPointF& tip, qreal s
     p.setBrush(brush);
 }
 
+/// Body of a pen pointing down-left, shared by the application icon and the pen tool.
 void drawPen(QPainter& p) {
-    p.drawPolygon(QPolygonF{QPointF(10, 38), QPointF(13, 28), QPointF(31, 10), QPointF(38, 17),
-                            QPointF(20, 35)});
-    p.drawLine(QPointF(27, 14), QPointF(34, 21));
+    p.drawPolygon(QPolygonF{QPointF(11, 37), QPointF(14, 28), QPointF(30, 12), QPointF(36, 18),
+                            QPointF(20, 34)});
+    p.drawLine(QPointF(26, 16), QPointF(32, 22));
 }
 
-void drawUndoArrow(QPainter& p) {
+/// Mouse cursor of the given @p height, with its tip at @p tip.
+QPolygonF cursorShape(const QPointF& tip, qreal height) {
+    const qreal u = height / 30.0; // the shape is designed 30 units tall
+    const auto at = [&tip, u](qreal x, qreal y) {
+        return QPointF(tip.x() + x * u, tip.y() + y * u);
+    };
+    return QPolygonF{tip, at(0, 30), at(7, 23), at(12, 34), at(16, 32), at(11, 21), at(19, 21)};
+}
+
+void drawCursor(QPainter& p, const QPointF& tip, qreal height) {
+    p.drawPolygon(cursorShape(tip, height));
+}
+
+/// Curved arrow of the undo button; redo mirrors it.
+void drawUndoArrow(QPainter& p, const QColor& color) {
     QPainterPath path;
-    path.moveTo(16, 16);
-    path.lineTo(29, 16);
-    path.cubicTo(40, 16, 40, 34, 29, 34);
-    path.lineTo(14, 34);
+    path.moveTo(15, 22);
+    path.lineTo(27, 22);
+    path.cubicTo(37, 22, 37, 37, 27, 37);
+    path.lineTo(19, 37);
     p.drawPath(path);
-    p.drawPolyline(QPolygonF{QPointF(22, 10), QPointF(16, 16), QPointF(22, 22)});
+    drawArrowHead(p, QPointF(23, 22), QPointF(13, 22), 12, color);
 }
 
 void drawGlyph(QPainter& p, IconId id, const QColor& color) {
@@ -73,168 +89,196 @@ void drawGlyph(QPainter& p, IconId id, const QColor& color) {
         break;
     }
     case IconId::Cursor:
-        p.drawPolygon(QPolygonF{QPointF(14, 8), QPointF(14, 38), QPointF(21, 31), QPointF(27, 42),
-                                QPointF(32, 40), QPointF(26, 29), QPointF(36, 29)});
+        drawCursor(p, QPointF(15, 8), 30);
         break;
     case IconId::Pen:
         drawPen(p);
         break;
     case IconId::Highlighter: {
+        // Chisel marker at 45 degrees over the translucent band it leaves behind.
         p.drawPolygon(
-            QPolygonF{QPointF(14, 30), QPointF(30, 14), QPointF(37, 21), QPointF(21, 37)});
-        p.drawPolyline(QPolygonF{QPointF(14, 30), QPointF(10, 38), QPointF(21, 37)});
+            QPolygonF{QPointF(17, 27), QPointF(29, 15), QPointF(37, 23), QPointF(25, 35)});
+        p.drawPolygon(
+            QPolygonF{QPointF(17, 27), QPointF(25, 35), QPointF(13, 38), QPointF(14, 31)});
         QColor band = color;
-        band.setAlpha(120);
-        p.setPen(QPen(band, 5, Qt::SolidLine, Qt::RoundCap));
-        p.drawLine(QPointF(8, 44), QPointF(40, 44));
+        band.setAlpha(110);
+        p.setPen(QPen(band, 6, Qt::SolidLine, Qt::RoundCap));
+        p.drawLine(QPointF(12, 43), QPointF(36, 43));
+        p.setPen(glyphPen(color));
         break;
     }
     case IconId::FreeArrow: {
-        // Hand-drawn stroke that straightens at the end, with a solid head on the very tip.
+        // Free stroke that straightens at the end, so the head reads as its tip.
         QPainterPath curve;
-        curve.moveTo(7, 40);
-        curve.cubicTo(13, 18, 22, 40, 29, 22);
+        curve.moveTo(9, 39);
+        curve.cubicTo(14, 20, 22, 39, 28, 23);
         p.drawPath(curve);
-        p.drawLine(QPointF(29, 22), QPointF(36, 13));
-        drawArrowHead(p, QPointF(29, 22), QPointF(38, 10), 13, color);
+        p.drawLine(QPointF(28, 23), QPointF(34, 15));
+        drawArrowHead(p, QPointF(29, 22), QPointF(38, 10), 12, color);
         break;
     }
     case IconId::Line:
-        p.drawLine(QPointF(10, 38), QPointF(38, 10));
+        p.drawLine(QPointF(11, 37), QPointF(37, 11));
         break;
     case IconId::Arrow:
-        p.drawLine(QPointF(10, 38), QPointF(36, 12));
-        p.drawPolyline(QPolygonF{QPointF(22, 12), QPointF(36, 12), QPointF(36, 26)});
+        p.drawLine(QPointF(11, 37), QPointF(32, 16));
+        drawArrowHead(p, QPointF(20, 28), QPointF(38, 10), 12, color);
         break;
     case IconId::Rectangle:
-        p.drawRoundedRect(QRectF(9, 13, 30, 22), 2, 2);
+        p.drawRoundedRect(QRectF(9, 14, 30, 20), 3, 3);
         break;
     case IconId::Ellipse:
-        p.drawEllipse(QRectF(7, 13, 34, 22));
+        p.drawEllipse(QRectF(8, 14, 32, 20));
         break;
     case IconId::Eraser:
-        p.drawPolygon(QPolygonF{QPointF(8, 30), QPointF(26, 12), QPointF(38, 24), QPointF(22, 40),
-                                QPointF(16, 40)});
-        p.drawLine(QPointF(17, 21), QPointF(29, 33));
-        p.drawLine(QPointF(22, 40), QPointF(40, 40));
+        // Rubber block tilted on the surface it is rubbing out.
+        p.save();
+        p.translate(25, 24);
+        p.rotate(-45);
+        p.drawRoundedRect(QRectF(-15, -8, 30, 16), 3, 3);
+        p.drawLine(QPointF(3, -8), QPointF(3, 8)); // the softer half of the rubber
+        p.restore();
+        p.drawLine(QPointF(19, 40), QPointF(39, 40));
         break;
-    case IconId::Move: {
-        p.drawLine(QPointF(24, 7), QPointF(24, 41));
-        p.drawLine(QPointF(7, 24), QPointF(41, 24));
-        p.drawPolyline(QPolygonF{QPointF(19, 12), QPointF(24, 7), QPointF(29, 12)});
-        p.drawPolyline(QPolygonF{QPointF(19, 36), QPointF(24, 41), QPointF(29, 36)});
-        p.drawPolyline(QPolygonF{QPointF(12, 19), QPointF(7, 24), QPointF(12, 29)});
-        p.drawPolyline(QPolygonF{QPointF(36, 19), QPointF(41, 24), QPointF(36, 29)});
+    case IconId::Move:
+        // Cross with open chevrons: solid heads at this size turn the middle into a blob.
+        p.drawLine(QPointF(24, 9), QPointF(24, 39));
+        p.drawLine(QPointF(9, 24), QPointF(39, 24));
+        p.drawPolyline(QPolygonF{QPointF(19, 14), QPointF(24, 9), QPointF(29, 14)});
+        p.drawPolyline(QPolygonF{QPointF(19, 34), QPointF(24, 39), QPointF(29, 34)});
+        p.drawPolyline(QPolygonF{QPointF(14, 19), QPointF(9, 24), QPointF(14, 29)});
+        p.drawPolyline(QPolygonF{QPointF(34, 19), QPointF(39, 24), QPointF(34, 29)});
         break;
-    }
     case IconId::Text:
-        p.drawLine(QPointF(11, 11), QPointF(37, 11));
-        p.drawLine(QPointF(24, 11), QPointF(24, 39));
-        p.drawLine(QPointF(18, 39), QPointF(30, 39));
+        p.drawLine(QPointF(12, 13), QPointF(36, 13));
+        p.drawLine(QPointF(24, 13), QPointF(24, 37));
+        p.drawLine(QPointF(18, 37), QPointF(30, 37));
         break;
-    case IconId::Callout: {
-        // "T" label at the tail and, clearly apart from it, the arrow it labels.
-        p.drawLine(QPointF(4, 27), QPointF(16, 27));
-        p.drawLine(QPointF(10, 27), QPointF(10, 41));
-        p.drawLine(QPointF(23, 40), QPointF(33, 21));
-        drawArrowHead(p, QPointF(23, 40), QPointF(38, 12), 13, color);
+    case IconId::Callout:
+        // Label ("T") at the tail of the arrow it names, clearly apart from it.
+        p.drawLine(QPointF(7, 24), QPointF(19, 24));
+        p.drawLine(QPointF(13, 24), QPointF(13, 38));
+        p.drawLine(QPointF(25, 38), QPointF(33, 24));
+        drawArrowHead(p, QPointF(30, 29), QPointF(38, 15), 11, color);
+        break;
+    case IconId::Whiteboard:
+        // Board on a stand, with a stroke drawn on it.
+        p.drawRoundedRect(QRectF(8, 9, 32, 23), 3, 3);
+        p.drawLine(QPointF(24, 32), QPointF(24, 37));
+        p.drawLine(QPointF(24, 37), QPointF(18, 42));
+        p.drawLine(QPointF(24, 37), QPointF(30, 42));
+        p.drawPolyline(
+            QPolygonF{QPointF(14, 25), QPointF(20, 17), QPointF(26, 23), QPointF(34, 15)});
+        break;
+    case IconId::Play: {
+        QPainterPath triangle;
+        triangle.moveTo(17, 11);
+        triangle.lineTo(38, 24);
+        triangle.lineTo(17, 37);
+        triangle.closeSubpath();
+        p.setPen(QPen(color, kStroke, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        p.setBrush(color);
+        p.drawPath(triangle);
+        p.setBrush(Qt::NoBrush);
         break;
     }
-    case IconId::Whiteboard:
-        p.drawRoundedRect(QRectF(6, 8, 36, 26), 2, 2);
-        p.drawLine(QPointF(24, 34), QPointF(18, 42));
-        p.drawLine(QPointF(24, 34), QPointF(30, 42));
-        p.drawPolyline(
-            QPolygonF{QPointF(12, 26), QPointF(19, 18), QPointF(25, 23), QPointF(35, 14)});
-        break;
-    case IconId::Play:
-        p.drawPolygon(QPolygonF{QPointF(16, 10), QPointF(38, 24), QPointF(16, 38)});
-        break;
     case IconId::Undo:
-        drawUndoArrow(p);
+        drawUndoArrow(p, color);
         break;
     case IconId::Redo:
         p.translate(kCanvas, 0);
         p.scale(-1, 1);
-        drawUndoArrow(p);
+        drawUndoArrow(p, color);
         break;
     case IconId::Clear:
-        p.drawLine(QPointF(9, 14), QPointF(39, 14));
-        p.drawPolyline(QPolygonF{QPointF(19, 14), QPointF(19, 9), QPointF(29, 9), QPointF(29, 14)});
-        p.drawPolygon(
-            QPolygonF{QPointF(13, 14), QPointF(16, 40), QPointF(32, 40), QPointF(35, 14)});
+        // Waste bin: lid, handle, body and the two marks a bin usually has.
+        p.drawLine(QPointF(9, 15), QPointF(39, 15));
+        p.drawPolyline(QPolygonF{QPointF(19, 15), QPointF(19, 9), QPointF(29, 9), QPointF(29, 15)});
+        p.drawPolyline(
+            QPolygonF{QPointF(13, 15), QPointF(16, 40), QPointF(32, 40), QPointF(35, 15)});
+        p.drawLine(QPointF(21, 21), QPointF(21, 34));
+        p.drawLine(QPointF(27, 21), QPointF(27, 34));
         break;
     case IconId::Visibility: {
         QPainterPath eye;
-        eye.moveTo(5, 24);
-        eye.quadTo(24, 4, 43, 24);
-        eye.quadTo(24, 44, 5, 24);
+        eye.moveTo(7, 24);
+        eye.quadTo(24, 7, 41, 24);
+        eye.quadTo(24, 41, 7, 24);
         p.drawPath(eye);
-        p.drawEllipse(QPointF(24, 24), 5.5, 5.5);
+        p.setBrush(color);
+        p.drawEllipse(QPointF(24, 24), 4.5, 4.5);
+        p.setBrush(Qt::NoBrush);
         break;
     }
     case IconId::CustomColor: {
-        QConicalGradient gradient(QPointF(24, 24), 0);
+        QConicalGradient gradient(QPointF(24, 24), 90);
         for (int i = 0; i <= 6; ++i) {
-            gradient.setColorAt(i / 6.0, QColor::fromHsv((i * 60) % 360, 220, 255));
+            gradient.setColorAt(i / 6.0, QColor::fromHsv((i * 60) % 360, 215, 250));
         }
-        p.setPen(QPen(QColor(255, 255, 255, 140), 2));
-        p.setBrush(gradient);
-        p.drawEllipse(QPointF(24, 24), 15, 15);
+        QPainterPath wheel;
+        wheel.setFillRule(Qt::OddEvenFill);
+        wheel.addEllipse(QPointF(24, 24), 15, 15);
+        wheel.addEllipse(QPointF(24, 24), 5.5, 5.5); // see-through hole
+        p.setPen(Qt::NoPen);
+        p.fillPath(wheel, gradient);
+        p.setPen(glyphPen(color));
         break;
     }
     case IconId::Screenshot:
-        p.drawRoundedRect(QRectF(7, 15, 34, 24), 4, 4);
+        // Camera: body, viewfinder bump, lens and flash.
+        p.drawRoundedRect(QRectF(8, 16, 32, 22), 4, 4);
         p.drawPolyline(
-            QPolygonF{QPointF(16, 15), QPointF(19, 10), QPointF(29, 10), QPointF(32, 15)});
-        p.drawEllipse(QPointF(24, 27), 6.5, 6.5);
+            QPolygonF{QPointF(17, 16), QPointF(20, 11), QPointF(28, 11), QPointF(31, 16)});
+        p.drawEllipse(QPointF(24, 28), 6.5, 6.5);
+        p.setBrush(color);
+        p.drawEllipse(QPointF(34, 21), 1.4, 1.4);
+        p.setBrush(Qt::NoBrush);
         break;
     case IconId::Record:
-        p.drawEllipse(QPointF(24, 24), 16, 16);
+        p.drawEllipse(QPointF(24, 24), 15, 15);
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(0xE5, 0x39, 0x35));
-        p.drawEllipse(QPointF(24, 24), 10, 10);
+        p.drawEllipse(QPointF(24, 24), 8, 8);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(glyphPen(color));
         break;
     case IconId::Stop:
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(0xE5, 0x39, 0x35));
-        p.drawRoundedRect(QRectF(13, 13, 22, 22), 3, 3);
+        p.drawRoundedRect(QRectF(15, 15, 18, 18), 3, 3);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(glyphPen(color));
         break;
     case IconId::Pause:
         p.setPen(Qt::NoPen);
         p.setBrush(color);
-        p.drawRoundedRect(QRectF(14, 12, 7, 24), 2, 2);
-        p.drawRoundedRect(QRectF(27, 12, 7, 24), 2, 2);
+        p.drawRoundedRect(QRectF(16, 13, 5.5, 22), 2.5, 2.5);
+        p.drawRoundedRect(QRectF(26.5, 13, 5.5, 22), 2.5, 2.5);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(glyphPen(color));
         break;
     case IconId::Spotlight: {
+        // Everything dimmed except a circle of light: the shape people already recognised.
         QPainterPath dim;
         dim.setFillRule(Qt::OddEvenFill);
-        dim.addRoundedRect(QRectF(5, 9, 38, 30), 3, 3);
-        dim.addEllipse(QPointF(24, 24), 9, 9);
+        dim.addRoundedRect(QRectF(7, 11, 34, 26), 4, 4);
+        dim.addEllipse(QPointF(24, 24), 9.5, 9.5);
         QColor shade = color;
         shade.setAlpha(110);
         p.fillPath(dim, shade);
-        p.drawEllipse(QPointF(24, 24), 9, 9);
+        p.drawEllipse(QPointF(24, 24), 9.5, 9.5);
         break;
     }
-    case IconId::Halo: {
-        QColor glow(255, 235, 59, 120);
-        p.setBrush(glow);
-        p.setPen(QPen(QColor(255, 235, 59), 2.5));
-        p.drawEllipse(QPointF(21, 21), 14, 14);
+    case IconId::Halo:
+        // Just the ring of light: a cursor inside only added noise at 22 px.
+        p.setPen(QPen(QColor(0xFD, 0xD8, 0x35), 4.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        p.drawEllipse(QPointF(24, 24), 13, 13);
         p.setPen(glyphPen(color));
-        p.setBrush(Qt::NoBrush);
-        p.drawPolygon(QPolygonF{QPointF(21, 21), QPointF(21, 42), QPointF(26, 37), QPointF(30, 44),
-                                QPointF(33, 42), QPointF(29, 35), QPointF(36, 35)});
         break;
-    }
     case IconId::Settings: {
-        // Cogwheel: filled silhouette with square teeth and a hole, instead of a ring with rays
-        // (which read as a sun).
+        // Cogwheel: teeth around a ring with a hole, filled so it reads at small sizes.
         constexpr int kTeeth = 8;
         constexpr qreal kStep = 360.0 / kTeeth;
-        constexpr qreal kOuter = 21.0;
-        constexpr qreal kRoot = 15.5;
         const QPointF center(24, 24);
         const auto at = [&center](qreal radius, qreal degrees) {
             return QLineF::fromPolar(radius, degrees).translated(center).p2();
@@ -242,9 +286,8 @@ void drawGlyph(QPainter& p, IconId id, const QColor& color) {
         QPainterPath gear;
         for (int i = 0; i < kTeeth; ++i) {
             const qreal angle = i * kStep;
-            const QPointF points[]{
-                at(kRoot, angle - kStep * 0.34), at(kOuter, angle - kStep * 0.20),
-                at(kOuter, angle + kStep * 0.20), at(kRoot, angle + kStep * 0.34)};
+            const QPointF points[]{at(15.0, angle - kStep * 0.30), at(20.0, angle - kStep * 0.17),
+                                   at(20.0, angle + kStep * 0.17), at(15.0, angle + kStep * 0.30)};
             for (const QPointF& point : points) {
                 if (gear.elementCount() == 0) {
                     gear.moveTo(point);
@@ -254,9 +297,9 @@ void drawGlyph(QPainter& p, IconId id, const QColor& color) {
             }
         }
         gear.closeSubpath();
-        gear.addEllipse(center, 7.0, 7.0); // the hole, left out by the odd-even rule
+        gear.addEllipse(center, 6.5, 6.5); // the hole, left out by the odd-even rule
         gear.setFillRule(Qt::OddEvenFill);
-        p.setPen(Qt::NoPen);
+        p.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
         p.setBrush(color);
         p.drawPath(gear);
         p.setBrush(Qt::NoBrush);
@@ -265,22 +308,21 @@ void drawGlyph(QPainter& p, IconId id, const QColor& color) {
     }
     case IconId::Collapse:
         // Panel folding into the edge: the bar is the edge, the chevron goes into it.
-        p.drawLine(QPointF(12, 11), QPointF(12, 37));
-        p.drawPolyline(QPolygonF{QPointF(34, 13), QPointF(22, 24), QPointF(34, 35)});
+        p.drawLine(QPointF(14, 12), QPointF(14, 36));
+        p.drawPolyline(QPolygonF{QPointF(34, 15), QPointF(24, 24), QPointF(34, 33)});
         break;
     case IconId::Minimize:
         // Down into the bar: clearer than a lone dash for "minimize to the taskbar".
-        p.drawLine(QPointF(24, 9), QPointF(24, 26));
-        drawArrowHead(p, QPointF(24, 9), QPointF(24, 31), 12, color);
-        p.drawLine(QPointF(13, 39), QPointF(35, 39));
+        p.drawLine(QPointF(24, 10), QPointF(24, 26));
+        drawArrowHead(p, QPointF(24, 18), QPointF(24, 32), 12, color);
+        p.drawLine(QPointF(14, 39), QPointF(34, 39));
         break;
     case IconId::Quit:
-        p.drawLine(QPointF(14, 14), QPointF(34, 34));
-        p.drawLine(QPointF(34, 14), QPointF(14, 34));
+        p.drawLine(QPointF(15, 15), QPointF(33, 33));
+        p.drawLine(QPointF(33, 15), QPointF(15, 33));
         break;
     }
 }
-
 } // namespace
 
 QIcon icon(IconId id, const QColor& color) {
