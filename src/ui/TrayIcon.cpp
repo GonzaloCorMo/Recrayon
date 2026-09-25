@@ -17,6 +17,12 @@ TrayIcon::TrayIcon(const AppActions& actions, QObject* parent)
         m_menu.addMenu(actions.whiteboardMenu);
     }
     m_menu.addAction(actions.toggleToolbar);
+    if (actions.collapseToolbar) {
+        m_menu.addAction(actions.collapseToolbar);
+    }
+    if (actions.minimize) {
+        m_menu.addAction(actions.minimize); // to the taskbar; the toolbar button collapses instead
+    }
     m_menu.addSeparator();
     m_menu.addAction(actions.undo);
     m_menu.addAction(actions.redo);

@@ -34,6 +34,7 @@ enum class IconId {
     Halo,
     Settings,
     Minimize,
+    Collapse, ///< chevron pointing left; the toolbar rotates it per edge
     Quit,
 };
 

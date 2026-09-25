@@ -9,6 +9,7 @@ namespace {
 constexpr auto kToolbarPositionKey = "session/toolbarPosition";
 constexpr auto kStrokeWidthKey = "session/strokeWidth";
 constexpr auto kToolKey = "session/tool";
+constexpr auto kCollapsedKey = "session/toolbarCollapsed";
 
 // Same range as the custom widths the tool controller accepts; anything else is a corrupt file.
 constexpr qreal kMinStrokeWidth = 0.5;
@@ -28,6 +29,8 @@ SessionState SessionState::load(QSettings& store) {
         state.strokeWidth = width;
     }
     state.tool = store.value(QLatin1String(kToolKey)).toString();
+    state.toolbarCollapsed =
+        store.value(QLatin1String(kCollapsedKey), state.toolbarCollapsed).toBool();
     return state;
 }
 
@@ -43,6 +46,7 @@ void SessionState::save(QSettings& store) const {
         store.remove(QLatin1String(kStrokeWidthKey));
     }
     store.setValue(QLatin1String(kToolKey), tool);
+    store.setValue(QLatin1String(kCollapsedKey), toolbarCollapsed);
 }
 
 } // namespace recrayon

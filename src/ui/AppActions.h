@@ -12,6 +12,7 @@ struct AppActions {
     QAction* toggleVisibility = nullptr; ///< checkable; checked = annotations visible
     QAction* toggleToolbar = nullptr;    ///< checkable; checked = toolbar shown (not minimized)
     QAction* minimize = nullptr;         ///< toolbar to the taskbar, app keeps running
+    QAction* collapseToolbar = nullptr;  ///< shrink the toolbar against the nearest screen edge
     QAction* toggleWhiteboard = nullptr; ///< checkable; blank page (scope from settings)
     QMenu* whiteboardMenu = nullptr;     ///< whiteboard on this screen / on all screens
     QAction* undo = nullptr;

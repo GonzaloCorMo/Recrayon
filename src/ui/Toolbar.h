@@ -48,6 +48,11 @@ public:
     Toolbar(ToolController& tools, const AppActions& actions, const Settings& settings,
             QWidget* parent = nullptr);
 
+    /// Shrinks the toolbar to a small tab against the nearest screen edge (or expands it again).
+    /// Useful where the toolbar cannot be kept out of captures (Linux, macOS).
+    void setCollapsed(bool collapsed);
+    [[nodiscard]] bool isCollapsed() const noexcept { return m_collapsed; }
+
     /// Every toolbar item, in the default order. Icons are drawn in @p glyph (the toolbar's light
     /// color by default; pass the palette's text color for light backgrounds).
     [[nodiscard]] static QList<ItemInfo> itemCatalog(const QColor& glyph = icons::kGlyphColor);
@@ -63,11 +68,15 @@ signals:
     void minimizedChanged(bool minimized);
     /// The system asked to close the toolbar (taskbar "Close window", Alt+F4).
     void quitRequested();
+    /// Collapsed against a screen edge, or expanded again.
+    void collapsedChanged(bool collapsed);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void changeEvent(QEvent* event) override;
+    /// Drag the collapsed tab with the mouse; a click without dragging expands it.
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
 
 private:
@@ -75,6 +84,11 @@ private:
     QToolButton* makeActionButton(QAction* action);
     QToolButton* makeMenuButton(QAction* action, QMenu* menu);
     QToolButton* makeToolButton(ToolKind kind, icons::IconId icon, const QString& label);
+    /// Screen edge the toolbar is closest to, and where the collapsed tab sticks.
+    [[nodiscard]] Qt::Edge nearestEdge() const;
+    void moveCollapsedToEdge();
+    void updateHandle();
+    void keepOnScreen();
     /// Adds @p widget to the next cell of a section, filling m_lanes cells across the toolbar.
     void place(QGridLayout* grid, QWidget* widget) const;
     void buildColorSection(QGridLayout* grid);
@@ -92,7 +106,16 @@ private:
     QButtonGroup* m_colorGroup = nullptr;
     QButtonGroup* m_widthGroup = nullptr;
     QToolButton* m_customColorButton = nullptr;
+    QWidget* m_body = nullptr;       ///< everything except the collapsed tab
+    QToolButton* m_handle = nullptr; ///< the arrow that expands the toolbar again
+    bool m_collapsed = false;
+    Qt::Edge m_edge = Qt::RightEdge; ///< edge the collapsed tab sticks to
+    QPoint m_expandedPos;            ///< where to go back to when expanding
+    QPoint m_handlePressPos;         ///< where a drag of the collapsed tab started
+    bool m_handleDragging = false;
+    bool m_collapsedMoved = false; ///< the tab was dragged while collapsed
     ToolbarMetrics m_metrics;
+    bool m_menuOnLeftClick = true;
     bool m_vertical = true;
     int m_lanes = 2;
 };

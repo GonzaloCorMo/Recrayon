@@ -4,6 +4,7 @@
 #include "ui/Icons.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QBoxLayout>
 #include <QButtonGroup>
 #include <QCloseEvent>
@@ -11,11 +12,15 @@
 #include <QCoreApplication>
 #include <QFrame>
 #include <QGridLayout>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QScreen>
 #include <QToolButton>
+#include <QTransform>
+#include <QVBoxLayout>
 #include <QWindow>
 
 #include <algorithm>
@@ -169,10 +174,10 @@ QList<Toolbar::ItemInfo> Toolbar::itemCatalog(const QColor& glyph) {
             return {id, tr("Replay the drawing"), icons::icon(IconId::Play, glyph)};
         }
         if (id == kSpotlight) {
-            return {id, tr("Spotlight pointer"), icons::icon(IconId::Spotlight, glyph)};
+            return {id, tr("Spotlight cursor"), icons::icon(IconId::Spotlight, glyph)};
         }
         if (id == kHalo) {
-            return {id, tr("Highlight pointer"), icons::icon(IconId::Halo, glyph)};
+            return {id, tr("Highlight cursor"), icons::icon(IconId::Halo, glyph)};
         }
         if (id == kScreenshot) {
             return {id, tr("Screenshot"), icons::icon(IconId::Screenshot, glyph)};
@@ -194,7 +199,7 @@ QList<Toolbar::ItemInfo> Toolbar::itemCatalog(const QColor& glyph) {
             return {id, tr("Settings"), icons::icon(IconId::Settings, glyph), false};
         }
         if (id == kMinimize) {
-            return {id, tr("Minimize"), icons::icon(IconId::Minimize, glyph)};
+            return {id, tr("Collapse to the edge"), icons::icon(IconId::Collapse, glyph)};
         }
         return {id, tr("Quit"), icons::icon(IconId::Quit, glyph)};
     };
@@ -214,6 +219,7 @@ Toolbar::Toolbar(ToolController& tools, const AppActions& actions, const Setting
                           Qt::WindowMinimizeButtonHint | Qt::NoDropShadowWindowHint),
       m_tools(tools), m_palette(settings.palette), m_drawAction(actions.toggleDrawing),
       m_metrics(toolbarMetrics(settings.toolbarSize)),
+      m_menuOnLeftClick(settings.toolbarMenuTrigger == ToolbarMenuTrigger::LeftClick),
       m_vertical(settings.toolbarOrientation == ToolbarOrientation::Vertical),
       m_lanes(std::clamp(settings.toolbarLanes, kMinToolbarLanes, kMaxToolbarLanes)) {
     setAttribute(Qt::WA_TranslucentBackground);
@@ -221,13 +227,24 @@ Toolbar::Toolbar(ToolController& tools, const AppActions& actions, const Setting
     setStyleSheet(QString::fromLatin1(kStyleSheet));
 
     // The grip strip is at the start: above the sections when vertical, left of them otherwise.
+    // Outer layout: the toolbar itself, or the small tab it collapses into.
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+    outer->setSizeConstraint(QLayout::SetFixedSize);
+    m_body = new QWidget(this);
+    outer->addWidget(m_body);
+    m_handle = makeButton(icons::icon(IconId::Collapse), tr("Show the toolbar"));
+    m_handle->hide();
+    m_handle->installEventFilter(this); // a click expands, a drag moves the collapsed tab
+    outer->addWidget(m_handle);
+
     const int margin = m_metrics.buttonSize / 4;
     auto* root =
-        new QBoxLayout(m_vertical ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight, this);
+        new QBoxLayout(m_vertical ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight, m_body);
     root->setContentsMargins(m_vertical ? margin : kGripThickness,
                              m_vertical ? kGripThickness : margin, margin, margin);
     root->setSpacing(kSectionSpacing);
-    root->setSizeConstraint(QLayout::SetFixedSize);
 
     // Not exclusive: "no tool" (the mouse) must be a valid state. Exclusivity is kept by
     // syncToolSelection(). The group exists even with every tool hidden, for toolChanged().
@@ -282,7 +299,7 @@ Toolbar::Toolbar(ToolController& tools, const AppActions& actions, const Setting
             return {actions.settings, nullptr};
         }
         if (id == kMinimize) {
-            return {actions.minimize, nullptr};
+            return {actions.collapseToolbar, nullptr};
         }
         if (id == kQuit) {
             return {actions.quit, nullptr};
@@ -299,7 +316,7 @@ Toolbar::Toolbar(ToolController& tools, const AppActions& actions, const Setting
             return section;
         }
         if (section) {
-            auto* line = new QFrame(this);
+            auto* line = new QFrame(m_body);
             line->setObjectName(QStringLiteral("separator"));
             if (m_vertical) {
                 line->setFixedHeight(1);
@@ -382,12 +399,25 @@ QToolButton* Toolbar::makeMenuButton(QAction* action, QMenu* menu) {
     if (!menu) {
         return button;
     }
-    // Click = default target; press and hold, or right-click = choose another one.
     button->setMenu(menu);
-    button->setPopupMode(QToolButton::DelayedPopup);
+    // Right-click (and press and hold) always opens the menu, whatever the left click does.
     button->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(button, &QWidget::customContextMenuRequested, button,
             [button, menu](const QPoint& pos) { menu->popup(button->mapToGlobal(pos)); });
+
+    if (!m_menuOnLeftClick) {
+        button->setPopupMode(QToolButton::DelayedPopup); // click = default target
+        return button;
+    }
+    // Click = menu, except while the action is on: then the click has to switch it off (stop the
+    // recording, leave the whiteboard), which InstantPopup would make impossible.
+    const auto applyPopupMode = [button](bool on) {
+        button->setPopupMode(on ? QToolButton::DelayedPopup : QToolButton::InstantPopup);
+    };
+    applyPopupMode(action->isChecked());
+    if (action->isCheckable()) {
+        connect(action, &QAction::toggled, button, applyPopupMode);
+    }
     return button;
 }
 
@@ -485,6 +515,118 @@ void Toolbar::syncWidthSelection(qreal value) {
     m_widthGroup->setExclusive(true);
 }
 
+void Toolbar::setCollapsed(bool collapsed) {
+    if (m_collapsed == collapsed) {
+        return;
+    }
+    m_collapsed = collapsed;
+    if (collapsed) {
+        m_expandedPos = pos();
+        m_collapsedMoved = false;
+        m_edge = nearestEdge();
+        m_body->hide();
+        updateHandle();
+        m_handle->show();
+        adjustSize();
+        moveCollapsedToEdge();
+    } else {
+        m_handle->hide();
+        m_body->show();
+        adjustSize();
+        // Back where it was, unless the tab was dragged somewhere else meanwhile.
+        if (!m_collapsedMoved) {
+            move(m_expandedPos);
+        }
+        keepOnScreen();
+    }
+    update();
+    emit collapsedChanged(collapsed);
+}
+
+Qt::Edge Toolbar::nearestEdge() const {
+    const QRect frame(pos(), size());
+    const QScreen* screen = QGuiApplication::screenAt(frame.center());
+    if (!screen) {
+        screen = QGuiApplication::primaryScreen();
+    }
+    if (!screen) {
+        return Qt::RightEdge;
+    }
+    // A column collapses sideways and a row up or down: the tab then keeps the place the
+    // toolbar had along its long axis, instead of jumping to a corner.
+    const QRect area = screen->availableGeometry();
+    if (m_vertical) {
+        return frame.left() - area.left() <= area.right() - frame.right() ? Qt::LeftEdge
+                                                                          : Qt::RightEdge;
+    }
+    return frame.top() - area.top() <= area.bottom() - frame.bottom() ? Qt::TopEdge
+                                                                      : Qt::BottomEdge;
+}
+
+void Toolbar::updateHandle() {
+    // The arrow points away from the edge: that is where the toolbar comes back from.
+    const bool horizontalEdge = m_edge == Qt::TopEdge || m_edge == Qt::BottomEdge;
+    const int thickness = std::max(14, m_metrics.buttonSize / 2);
+    const int length = m_metrics.buttonSize * 3 / 2;
+    m_handle->setFixedSize(horizontalEdge ? length : thickness,
+                           horizontalEdge ? thickness : length);
+    m_handle->setIconSize(QSize(m_metrics.iconSize, m_metrics.iconSize));
+
+    const int rotation = m_edge == Qt::RightEdge  ? 0
+                         : m_edge == Qt::LeftEdge ? 180
+                         : m_edge == Qt::TopEdge  ? 270
+                                                  : 90;
+    QPixmap pixmap =
+        icons::icon(IconId::Collapse).pixmap(QSize(m_metrics.iconSize, m_metrics.iconSize));
+    if (rotation != 0) {
+        pixmap = pixmap.transformed(QTransform().rotate(rotation), Qt::SmoothTransformation);
+    }
+    m_handle->setIcon(QIcon(pixmap));
+}
+
+void Toolbar::moveCollapsedToEdge() {
+    const QScreen* screen = QGuiApplication::screenAt(m_expandedPos + QPoint(1, 1));
+    if (!screen) {
+        screen = QGuiApplication::primaryScreen();
+    }
+    if (!screen) {
+        return;
+    }
+    const QRect area = screen->availableGeometry();
+    const QRect was(m_expandedPos, m_body->sizeHint());
+    switch (m_edge) {
+    case Qt::LeftEdge:
+        move(area.left(), was.center().y() - height() / 2);
+        break;
+    case Qt::RightEdge:
+        move(area.right() + 1 - width(), was.center().y() - height() / 2);
+        break;
+    case Qt::TopEdge:
+        move(was.center().x() - width() / 2, area.top());
+        break;
+    case Qt::BottomEdge:
+        move(was.center().x() - width() / 2, area.bottom() + 1 - height());
+        break;
+    }
+    keepOnScreen();
+}
+
+void Toolbar::keepOnScreen() {
+    const QRect frame(pos(), size());
+    const QScreen* screen = QGuiApplication::screenAt(frame.center());
+    if (!screen) {
+        screen = QGuiApplication::screenAt(frame.topLeft());
+    }
+    if (!screen) {
+        return;
+    }
+    const QRect area = screen->availableGeometry();
+    move(
+        std::clamp(frame.x(), area.left(), std::max(area.left(), area.right() + 1 - frame.width())),
+        std::clamp(frame.y(), area.top(),
+                   std::max(area.top(), area.bottom() + 1 - frame.height())));
+}
+
 void Toolbar::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -494,6 +636,9 @@ void Toolbar::paintEvent(QPaintEvent* /*event*/) {
     painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), kCornerRadius,
                             kCornerRadius);
 
+    if (m_collapsed) {
+        return; // the tab is just the arrow
+    }
     // Grip dots hint that the palette can be dragged.
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(255, 255, 255, 90));
@@ -502,6 +647,38 @@ void Toolbar::paintEvent(QPaintEvent* /*event*/) {
         const QPointF dot = m_vertical ? QPointF(middle + i * 7.0, kGripThickness / 2.0)
                                        : QPointF(kGripThickness / 2.0, middle + i * 7.0);
         painter.drawEllipse(dot, 1.6, 1.6);
+    }
+}
+
+bool Toolbar::eventFilter(QObject* watched, QEvent* event) {
+    if (watched != m_handle) {
+        return QWidget::eventFilter(watched, event);
+    }
+    auto* mouse = dynamic_cast<QMouseEvent*>(event);
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+        if (mouse && mouse->button() == Qt::LeftButton) {
+            m_handlePressPos = mouse->globalPosition().toPoint();
+            m_handleDragging = false;
+        }
+        return true;
+    case QEvent::MouseMove:
+        if (mouse && !m_handleDragging && windowHandle() &&
+            (mouse->globalPosition().toPoint() - m_handlePressPos).manhattanLength() >=
+                QApplication::startDragDistance()) {
+            m_handleDragging = true; // from here the window manager moves the window
+            m_collapsedMoved = true; // expand where the user leaves it, not where it was
+            windowHandle()->startSystemMove();
+        }
+        return true;
+    case QEvent::MouseButtonRelease:
+        if (!m_handleDragging) {
+            setCollapsed(false);
+        }
+        m_handleDragging = false;
+        return true;
+    default:
+        return QWidget::eventFilter(watched, event);
     }
 }
 

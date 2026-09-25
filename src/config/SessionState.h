@@ -19,6 +19,8 @@ struct SessionState {
     std::optional<qreal> strokeWidth;
     /// toolId() of the current tool; empty = the default tool.
     QString tool;
+    /// The toolbar was left collapsed against a screen edge.
+    bool toolbarCollapsed = false;
 
     /// Reads the state; missing or invalid values stay empty.
     [[nodiscard]] static SessionState load(QSettings& store);

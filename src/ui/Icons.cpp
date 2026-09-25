@@ -227,6 +227,10 @@ void drawGlyph(QPainter& p, IconId id, const QColor& color) {
         }
         break;
     }
+    case IconId::Collapse:
+        p.drawPolyline(QPolygonF{QPointF(27, 12), QPointF(15, 24), QPointF(27, 36)});
+        p.drawPolyline(QPolygonF{QPointF(36, 16), QPointF(28, 24), QPointF(36, 32)});
+        break;
     case IconId::Minimize:
         p.drawLine(QPointF(14, 32), QPointF(34, 32));
         break;
