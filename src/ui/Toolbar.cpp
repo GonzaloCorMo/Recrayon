@@ -13,6 +13,7 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QGuiApplication>
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMouseEvent>
@@ -680,6 +681,21 @@ bool Toolbar::eventFilter(QObject* watched, QEvent* event) {
     default:
         return QWidget::eventFilter(watched, event);
     }
+}
+
+void Toolbar::keyPressEvent(QKeyEvent* event) {
+    // Clicking a button leaves the focus here, so the overlay would never see these keys.
+    if (!(event->modifiers() & ~Qt::KeyboardModifiers(Qt::KeypadModifier))) {
+        for (const ToolKey& entry : kToolKeys) {
+            if (event->key() == entry.key) {
+                m_tools.setCurrentTool(entry.kind);
+                emit toolPicked(); // draw mode, and the focus goes back to the overlay
+                syncToolSelection();
+                return;
+            }
+        }
+    }
+    QWidget::keyPressEvent(event);
 }
 
 void Toolbar::changeEvent(QEvent* event) {

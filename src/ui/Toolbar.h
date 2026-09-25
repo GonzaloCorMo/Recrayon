@@ -75,6 +75,8 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void changeEvent(QEvent* event) override;
+    /// Tool keys (1..9, 0, M) also work while the toolbar has the keyboard focus.
+    void keyPressEvent(QKeyEvent* event) override;
     /// Drag the collapsed tab with the mouse; a click without dragging expands it.
     bool eventFilter(QObject* watched, QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
